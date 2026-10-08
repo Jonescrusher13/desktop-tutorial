@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import data from "./data/workbook.json";
 import type { Deal } from "./data/types";
 import { amLabel, attachFromAmounts, attachPct, money, unique } from "./lib/format";
@@ -392,33 +392,40 @@ export default function App() {
                     <th className="num">Forecasted Services</th>
                     <th>CCW Quote Status</th>
                     <th>Salesforce Deal ID</th>
-                    <th>Governance & Action Plan</th>
+                    <th>Primary Workload</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((deal) => (
-                    <tr key={deal["Opportunity Name"]}>
-                      <td>{deal["Opportunity Name"]}</td>
-                      <td>{deal["Account Name"]}</td>
-                      <td className={deal._amPlaceholder ? "placeholder" : undefined}>
-                        {amLabel(deal)}
-                      </td>
-                      <td>{deal.Stage}</td>
-                      <td>{deal["Close Date"]}</td>
-                      <td className="num">{money(deal["Total TCV (USD)"])}</td>
-                      <td className="num">{money(deal["Forecasted Services"])}</td>
-                      <td>
-                        <span
-                          className={`tag ${deal["CCW Quote Status"] === "Integrated" ? "integrated" : "non"}`}
-                        >
-                          {deal["CCW Quote Status"]}
-                        </span>
-                      </td>
-                      <td className={deal["Salesforce Deal ID"] ? undefined : "missing"}>
-                        {deal["Salesforce Deal ID"] ?? "None"}
-                      </td>
-                      <td>{deal["Governance & Action Plan"]}</td>
-                    </tr>
+                    <Fragment key={deal["Opportunity Name"]}>
+                      <tr>
+                        <td>{deal["Opportunity Name"]}</td>
+                        <td>{deal["Account Name"]}</td>
+                        <td className={deal._amPlaceholder ? "placeholder" : undefined}>
+                          {amLabel(deal)}
+                        </td>
+                        <td>{deal.Stage}</td>
+                        <td>{deal["Close Date"]}</td>
+                        <td className="num">{money(deal["Total TCV (USD)"])}</td>
+                        <td className="num">{money(deal["Forecasted Services"])}</td>
+                        <td>
+                          <span
+                            className={`tag ${deal["CCW Quote Status"] === "Integrated" ? "integrated" : "non"}`}
+                          >
+                            {deal["CCW Quote Status"]}
+                          </span>
+                        </td>
+                        <td className={deal["Salesforce Deal ID"] ? undefined : "missing"}>
+                          {deal["Salesforce Deal ID"] ?? "None"}
+                        </td>
+                        <td>{deal["Primary Workload"]}</td>
+                      </tr>
+                      <tr className="action-row">
+                        <td colSpan={10}>
+                          <strong>Governance & Action Plan:</strong> {deal["Governance & Action Plan"]}
+                        </td>
+                      </tr>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
