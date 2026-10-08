@@ -1,16 +1,23 @@
 :root {
-  --ink: #1c2430;
-  --muted: #5c6570;
-  --navy: #1f4e79;
-  --navy-deep: #16385a;
-  --paper: #f3ead9;
-  --card: #fffaf1;
-  --rule: #d7cbb6;
-  --integrated: #2f6b4f;
-  --integrated-bg: #e4f0e6;
-  --open: #9c4320;
-  --open-bg: #f8e4d6;
-  --gold: #c4a35a;
+  color-scheme: dark;
+  --ink: #eef2f7;
+  --muted: #a7b4c4;
+  --navy: #7eb6e8;
+  --navy-deep: #b9d6f2;
+  --navy-fill: #2f6aa0;
+  --paper: #0c1118;
+  --card: #161d28;
+  --rule: #334155;
+  --integrated: #8fd4ae;
+  --integrated-bg: #163528;
+  --open: #f0a27a;
+  --open-bg: #3a241c;
+  --gold: #d4b36a;
+  --notice: #241e14;
+  --chip: #1c2d40;
+  --track: #2a3340;
+  --hover: #243044;
+  --action: #1c2430;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -21,6 +28,12 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -29,6 +42,7 @@ body {
 button,
 select {
   font: inherit;
+  color-scheme: dark;
 }
 
 #root {
@@ -38,7 +52,7 @@ select {
 }
 
 .masthead {
-  border-bottom: 3px solid var(--navy);
+  border-bottom: 3px solid var(--navy-fill);
   padding-bottom: 18px;
   margin-bottom: 18px;
 }
@@ -58,6 +72,7 @@ h1 {
   font-weight: 600;
   line-height: 1.2;
   margin: 0 0 8px;
+  color: var(--ink);
 }
 
 .lede {
@@ -69,8 +84,9 @@ h1 {
 .notice {
   margin: 14px 0 0;
   padding: 10px 12px;
-  background: #fff6e5;
+  background: var(--notice);
   border-left: 4px solid var(--gold);
+  color: var(--ink);
   font-size: 0.92rem;
 }
 
@@ -84,7 +100,7 @@ h1 {
 .chip {
   border: 1px solid var(--navy);
   color: var(--navy-deep);
-  background: #e8eef4;
+  background: var(--chip);
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 500;
@@ -120,7 +136,7 @@ h1 {
 
 .mode button[aria-pressed="true"],
 .views button[aria-pressed="true"] {
-  background: var(--navy);
+  background: var(--navy-fill);
   color: #fff;
 }
 
@@ -141,7 +157,7 @@ label {
 
 select {
   border: 1px solid var(--rule);
-  background: #fff;
+  background: var(--paper);
   padding: 7px 8px;
   color: var(--ink);
 }
@@ -156,6 +172,7 @@ h2 {
   font-family: "IBM Plex Serif", Georgia, serif;
   font-size: 1.25rem;
   margin: 0 0 6px;
+  color: var(--ink);
 }
 
 .section-help {
@@ -193,6 +210,7 @@ h2 {
   font-size: 1.45rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--ink);
 }
 
 .published {
@@ -222,6 +240,7 @@ h2 {
 .panel h3 {
   margin: 0 0 12px;
   font-size: 0.95rem;
+  color: var(--ink);
 }
 
 .bars {
@@ -238,17 +257,18 @@ h2 {
   gap: 8px;
   align-items: center;
   font-size: 13px;
+  color: var(--ink);
 }
 
 .track {
   height: 10px;
-  background: #ece4d4;
+  background: var(--track);
 }
 
 .track > span {
   display: block;
   height: 100%;
-  background: var(--navy);
+  background: var(--navy-fill);
   min-width: 0;
 }
 
@@ -266,6 +286,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  color: var(--ink);
 }
 
 th,
@@ -277,7 +298,7 @@ td {
 }
 
 th {
-  background: var(--navy);
+  background: var(--navy-fill);
   color: #fff;
   font-weight: 600;
   white-space: nowrap;
@@ -329,18 +350,21 @@ th.num {
 .action-card p {
   margin: 0 0 8px;
   white-space: pre-wrap;
+  color: var(--ink);
 }
 
 .action-card .guidance {
-  background: #e8eef4;
+  background: var(--chip);
   padding: 10px;
   font-size: 0.92rem;
+  color: var(--ink);
 }
 
 .empty {
   padding: 24px;
   background: var(--card);
   border: 1px dashed var(--rule);
+  color: var(--muted);
 }
 
 .footnote {
@@ -352,7 +376,7 @@ th.num {
 }
 
 .action-row td {
-  background: #f7f1e6;
+  background: var(--action);
   border-bottom: 2px solid var(--rule);
   color: var(--ink);
 }
@@ -363,5 +387,5 @@ th.num {
 
 .rep-row:hover,
 .rep-row[aria-selected="true"] {
-  background: #e8eef4;
+  background: var(--hover);
 }
