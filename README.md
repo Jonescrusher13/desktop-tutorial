@@ -1,21 +1,21 @@
 # Tennessee FY27 Annual Bookings dashboard
 
-Web dashboard for Steve Jones’ Bookings 360 MBR extract (`mbr360DetailExcel_FY27.xlsx`).
+Dark-theme web dashboard for Steve Jones’ Bookings 360 MBR extract.
 
-The dashboard sums the **Annual Bookings** column and filters by **Sales Agent Name**. Dark theme.
+Sums **Annual Bookings** and filters by **Sales Agent Name**. Drop a new `.xlsx` on the page to refresh — parsed in the browser, kept in the tab session, never sent to a server.
 
-Workbook brief: `docs/workbook-brief.md`
+## Live URL
 
-## Run
+https://jonescrusher13.github.io/desktop-tutorial/
+
+## Run locally
 
 ```bash
 npm install
 npm start
 ```
 
-Then open http://localhost:5173
-
-`npm start` parses `data/mbr360DetailExcel_FY27.xlsx` on boot. There is no manual Excel step.
+Open http://localhost:5173
 
 ## Other commands
 

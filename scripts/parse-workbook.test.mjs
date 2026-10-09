@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseWorkbook } from "./parse-workbook.mjs";
+import * as XLSX from "xlsx";
+import { parseWorkbook, parseMbrWorkbook, WorkbookParseError } from "./parse-workbook.mjs";
 
 const data = parseWorkbook();
 
@@ -35,4 +36,24 @@ test("sums Annual Bookings and splits by Sales Agent Name", () => {
   assert.equal(byAgent.get("Loyd,Mack"), 77624);
   assert.equal(byAgent.get("Tassio,Tim"), 26394);
   assert.equal(byAgent.get("Kelley,Steven"), 1442);
+});
+
+test("rejects a workbook missing Annual Bookings and Sales Agent Name", () => {
+  const sheet = XLSX.utils.aoa_to_sheet([
+    ["Not an MBR export"],
+    ["Account", "Amount"],
+    ["Acme", 100],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, "Sheet0");
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  assert.throws(
+    () => parseMbrWorkbook(buffer, "wrong.xlsx"),
+    (err) => {
+      assert.ok(err instanceof WorkbookParseError);
+      assert.ok(err.message.includes("Annual Bookings"));
+      assert.ok(err.message.includes("Sales Agent Name"));
+      return true;
+    },
+  );
 });
