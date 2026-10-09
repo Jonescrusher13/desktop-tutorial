@@ -1,0 +1,50 @@
+name: Deploy dashboard
+
+on:
+  push:
+    branches:
+      - main
+      - cursor/tennessee-fy27-dashboard-b81f
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          BASE_PATH: /desktop-tutorial/
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          force_orphan: true
+      - name: Enable GitHub Pages on gh-pages
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" \
+            -H "Accept: application/vnd.github+json" \
+            -f "source[branch]=gh-pages" \
+            -f "source[path]=/" \
+          || gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" \
+            -H "Accept: application/vnd.github+json" \
+            -f "source[branch]=gh-pages" \
+            -f "source[path]=/"
+          gh api "repos/${GITHUB_REPOSITORY}/pages" || true
