@@ -181,6 +181,19 @@ h2 {
   font-size: 0.95rem;
 }
 
+.hero-metric {
+  margin: 0 0 18px;
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.toolbar label {
+  max-width: 28rem;
+}
+
 .kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
