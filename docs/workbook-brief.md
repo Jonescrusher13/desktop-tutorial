@@ -1,165 +1,85 @@
-# Tennessee Region FY27 workbook brief
+# FY27 workbook brief
 
-For Steve Jones. Source file: `Tennessee_Region_Pipeline_Services_Governance_FY27.xlsx` (created 2026-10-01). This is a **services-attach governance pack** for already-flagged pipeline, not a full bookings extract and not a live Salesforce dump. There is **no closed-bookings column**. Services dollars in the file are **Forecasted Services**.
-
-The file has **no Excel tables, no AutoFilter, no freeze panes, and no data-validation dropdowns**. Scope is written in title/subtitle rows, not as filter controls.
+Steve Jones. Current dashboard source is the Bookings 360 MBR extract, not the earlier attach-governance pack.
 
 ---
 
-## Sheets
+## Current source: `mbr360DetailExcel_FY27.xlsx`
 
-### 1. `Executive Summary`
+Uploaded as `mbr360DetailExcel_2026-10-09T18_15_50Z_14705973296960010704.xlsx`.
 
-What it is: a one-page team snapshot of the flagged slice, plus a two-group quote-integration breakdown.
+### Sheets
 
-Grain:
+One sheet: **`Sheet0`**.
 
-- Rows 1–2 are title and scope (not a table).
-- **KPI block (rows 5–6): one row = the Tennessee flagged set as a whole.**
-- **Governance table (rows 9–12): one row = a quote-integration category**, plus a **totals row**.
+- **A1** (merged A1:E1): `Bookings 360|WK11 / OCT FY2027 / Q1 FY2027|Refreshed on 2026-10-08 08:00:00 PM`
+- **C3–C6** are already-applied report filters (not Excel AutoFilter):
+  - `Product Service is equal to Service`
+  - `Year is equal to 2027`
+  - `Quarter is equal to Q1 FY2027`
+  - `Sales Motion is equal to New and Unknown`
+- **Row 8** is the column header row (82 columns, A–CD).
+- **Rows 9–1967** are detail lines.
+- **Row 1968** is a **`Grand Total`** row. `Sales Agent Name` is blank. `Annual Bookings` on that row is `337160`. **Exclude this row** from sums or it double-counts.
 
-### 2. `Flagged Opportunities`
+### Grain
 
-What it is: the deal list behind the summary. Subtitle: `FY27 Q1 & Q2 Close Dates | Excludes Wireless APs & Meraki`.
+**One row = one bookings line** on `Sheet0`. Not one deal, not one rep, not one week.
 
-Grain: **one row = one opportunity (deal)**. Rows 5–12 are deals. Row 13 is a **totals row** with formulas `=SUM(F5:F12)`, `=SUM(G5:G12)`, `=SUM(H5:H12)`, `=H13/F13`.
+The same `Sales Order Number` / `Deal ID` can appear on many lines (different product/service split, dates, or adjustments). Negative `Annual Bookings` values are in the file (adjustments); they are part of the column.
 
-### 3. `Remediation Plan`
-
-What it is: next actions for the two quote groups, with partner-facing notes.
-
-Grain: **one row = one action group** (not a deal, not a rep, not a week). Two rows only.
-
----
-
-## Column names (quote these)
-
-### Bookings
-
-**Not in the file.** Do not treat `Total TCV (USD)` or `Total Pipeline Value (TCV)` as closed bookings. Those are flagged **pipeline** dollars.
-
-### Forecast / services / product amounts
-
-| Sheet | Column | What it actually is |
-| --- | --- | --- |
-| `Flagged Opportunities` | `Forecasted Services` | Services dollars on the deal (almost all `$0`; one deal is `$2,500`) |
-| `Flagged Opportunities` | `Total TCV (USD)` | Deal total contract value |
-| `Flagged Opportunities` | `Technology (HW/SW)` | **A dollar amount**, not a product name or SKU |
-| `Flagged Opportunities` | `Services Attach %` | Services / TCV on that deal |
-| `Executive Summary` | `Total Forecasted Services` | Team rollup of forecasted services (`$2,500`) |
-| `Executive Summary` | `Total Flagged Pipeline (TCV)` | Team pipeline (`$16,930,000`) |
-| `Executive Summary` | `Total HW/SW Tech Value` | Team hardware/software dollars (`$16,927,500`) |
-| `Executive Summary` | `Overall Services Attach Rate` | Team attach (`0.015%`; Excel format `0.02%` displays it as `0.02%`) |
-| `Executive Summary` | `Forecasted Services` | Same idea, on the category table |
-| `Executive Summary` | `Total Pipeline Value (TCV)` | Category pipeline |
-| `Executive Summary` | `Avg Services Attach %` | Category attach |
-| `Remediation Plan` | `Total TCV` | Group pipeline |
-
-### Rep
-
-| Sheet | Column |
-| --- | --- |
-| `Flagged Opportunities` | `Assigned AM` |
-
-There is no quota, attainment, or bookings-vs-forecast-by-rep field.
-
-### Account
-
-| Sheet | Column |
-| --- | --- |
-| `Flagged Opportunities` | `Account Name` |
-| `Flagged Opportunities` | `Opportunity Name` |
-
-`Remediation Plan`.`Target Deals` is a **comma-separated account list with TCV in the same cell**, not an account table.
-
-### Offer / SKU
-
-**No offer, SKU, part number, or bill-of-materials column.** Closest fields:
+### Sales Agent field
 
 | Sheet | Column | Notes |
 | --- | --- | --- |
-| `Flagged Opportunities` | `Primary Workload` | Workload text (e.g. `Enterprise Switching (C9300)`), not a SKU |
-| `Flagged Opportunities` | `Technology (HW/SW)` | Dollars, not an offer name |
-| `Remediation Plan` | `Step-by-Step Remediation Action` / `Forwardable Partner Guidance` | Mentions CX Standard (L1), CX Signature (L2), SNTC, Solution Support in **prose** |
+| `Sheet0` | **`Sales Agent Name`** | Agent filter. Values look like `Loyd,Mack`, `Tassio,Tim`, `Bailes,Andy`. |
+| `Sheet0` | `Sales Agent Number` | Numeric agent ID (not used as the filter). |
+| `Sheet0` | `Email Address` | Short name such as `ttassio` (not a mailbox password; still not shown on the dashboard). |
 
-### Stage
+Ten named agents on the detail rows. The Grand Total row has a blank `Sales Agent Name` — that is not an agent.
 
-| Sheet | Column | Values in file |
+### Annual Bookings header
+
+| Sheet | Column | What it is |
 | --- | --- | --- |
-| `Flagged Opportunities` | `Stage` | `1 - Qualify`, `2 - Propose`, `3 - Tech Validation` |
+| `Sheet0` | **`Annual Bookings`** | The bookings dollars to display. Line-level amount. |
+| `Sheet0` | `MY Bookings` | Also in the file, next to Annual Bookings. |
+| `Sheet0` | `Total Bookings` | Also in the file, next to Annual Bookings. |
 
-### Dates
+**How the dashboard calculates Annual Bookings:** sum of `Sheet0`.`Annual Bookings` on detail rows (9–1967), after dropping `Grand Total`. Optional filter: `Sales Agent Name` equals the selected agent, or all agents.
 
-| Sheet | Column | Notes |
-| --- | --- | --- |
-| `Flagged Opportunities` | `Close Date` | **Text**, not Excel dates. Mixed formats: `2027-01-13 (Q2)`, `2026-12-18 (Q2)`, `Dec 2026 (Q2)`, `Nov 2026 (Q2)`, `Oct 2026 (Q1)`, `Jan 2027 (Q2)` |
+Detail-line sum is **$337,154**. The sheet’s `Grand Total` cell is **$337,160** ($6 difference). The live filter uses the line sum so agent amounts add up.
 
-No week grain. Fiscal period is only in the scope lines (`FY27 H1 (Q1 & Q2)`).
+All-agents and the ten `Sales Agent Name` values (line sum of `Annual Bookings`):
 
-### Other deal fields
+| Sales Agent Name | Annual Bookings |
+| --- | ---: |
+| Loyd,Mack | $77,624 |
+| Smith,Mark | $57,897 |
+| Cotton,Buddy | $48,561 |
+| Yarbrough,Jesica | $40,654 |
+| Tassio,Tim | $26,394 |
+| Moseley,Broc | $26,262 |
+| Davis,Michael | $23,044 |
+| Knight,James | $22,145 |
+| Bailes,Andy | $13,131 |
+| Kelley,Steven | $1,442 |
+| **All agents (detail sum)** | **$337,154** |
 
-| Sheet | Column |
-| --- | --- |
-| `Flagged Opportunities` | `Salesforce Deal ID` |
-| `Flagged Opportunities` | `CCW Quote Status` (`Integrated` / `Non-Integrated`) |
-| `Flagged Opportunities` | `Governance & Action Plan` |
+### Other columns on `Sheet0` (row 8 names)
 
-`Executive Summary` also has `Non-Integrated Quote Deals` (count `5`), `Integrated Deals (Need Uplift)` (count `3`), `Deal Count`, `Category / Classification`, `Primary Risk / Next Action`.
+`Sales Order Number`, `Deal ID`, `End Customer Company Name`, `End Customer Name`, `Booked Date`, `Bookings Type`, `Sales Motion`, `Transaction Date`, `AI Flag`, `AI Intent`, `AI Customer Class`, `AI Customer Subclass`, `Annual Bookings`, `MY Bookings`, `Total Bookings`, `Sales Agent Name`, `Quarter ID`, `Month ID`, `Week ID`, `L1`–`L6` (`L5` is `TENNESSEE REGION` on detail rows), `Country`, `SCMS`, `Sub SCMS`, `Email Address`, `Sales Agent Number`, `Service Category`, `Allocated Service Group`, `Service Level`, `Product Classification`, `Software Type`, `Software Stack`, `Monetization Type`, `Offer Type`, `Buying Program`, `Product Sub Group`, `CX Upsell Group`, `CX Product Portfolio`, `CX Product Category`, `CX Product`, `Bookings Adjustment Code`, `Bookings Adjustment Description`, `Path`, `CBN Flag`, `Bookings Channels Flag`, `Recurring Offer Flag`, `SaaS Flag`, `Buying Program Flag`, `Splunk Flag`, `AppD Flag`, `Purchase Order Number`, `Partner Name`, `Partner Certification`, `Partner Type`, `Business Entity ID`, `Partner Country`, `Registered Partner Flag`, `BE GEO ID`, `BE GEO Name`, `Sold To Company Name`, `Bill To Global Ultimate Name`, `Bill To Company Name`, `GU Party ID`, `HQ Party ID`, `End Customer Global Ultimate (Account)`, `End Customer Headquarters (HQ)`, `End Customer Branch (BR)`, `End Customer Site City`, `End Customer Site Postal Code`, `Ship To Site City`, `Ship To Site Postal Code`, `Branch Party ID`, `Master Distributor Name`, `Distributor Name`, `Service Contract Start Date`, `Service Contract End Date`, `Service Contract Term`, `Service Contract Number`.
 
-`Remediation Plan` columns: `Action Group`, `Target Deals`, `Total TCV`, `Key Vulnerability / Gap`, `Step-by-Step Remediation Action`, `Forwardable Partner Guidance`.
+### Data quality
 
----
-
-## Filters already in the file
-
-These are **baked into which deals were included**, via subtitle text — not slicers:
-
-From `Executive Summary` A2:
-
-`Scope: FY27 H1 (Q1 & Q2) | Deals > $100K | Services Forecasted < $10K | Excludes Wireless APs & Meraki`
-
-From `Flagged Opportunities` A2:
-
-`FY27 Q1 & Q2 Close Dates | Excludes Wireless APs & Meraki`
-
-From sheet titles: **Tennessee Region**.
-
-There is **no services-vs-product filter**. The pack is already the low-services slice of HW/SW pipeline. Product vs services only appears as separate amount columns (`Technology (HW/SW)` vs `Forecasted Services`).
+- Totals row mixed with detail (`Grand Total`).
+- 619 detail lines have **negative** `Annual Bookings`.
+- Some `Booked Date` values are `1900-01-01` (placeholder).
+- No Excel table / AutoFilter on the sheet; scope is the C3–C6 predicates plus L5 Tennessee on the lines.
+- **No forecast column** in this extract. Do not reuse the old `Forecasted Services` metrics here.
 
 ---
 
-## Data quality
+## Prior upload (not used by the dashboard)
 
-- **Totals mixed with deals.** `Flagged Opportunities` row 13 (`Total Flagged Opportunities`) and `Executive Summary` row 12 (`Total Flagged Pipeline`) will double-count if summed with detail rows.
-- **`Assigned AM` is a placeholder on two deals** (Covenant Health, Cookeville Regional Medical Center). The cell value is the literal string `Assigned AM`, same as the column header.
-- **`Salesforce Deal ID` = `None`** on five of eight deals (the Non-Integrated set).
-- **`Close Date` formats are mixed** (ISO date + quarter vs month-year + quarter). Cannot chart a real week without parsing/guessing.
-- **`Technology (HW/SW)` is money, not a SKU.** Easy to misread as an offer name.
-- **Only one deal has forecasted services:** Regional One Health, `Forecasted Services` `$2,500`, `Services Attach %` `0.00649`. Excel format `0.0%` **displays that as `0.0%`**, so the only non-zero attach is hidden in the sheet view.
-- On that same deal, `Total TCV (USD)` `$385,000` = `Technology (HW/SW)` `$382,500` + `Forecasted Services` `$2,500`. Every other deal has TCV = Technology and services `$0`.
-- **Group labels do not match across sheets.** Summary uses `Group 2: Integrated Quotes (Basic SNTC / Support Uplift)`; remediation uses `Group 2: Support Uplift Backlog`. Group 1 names also differ slightly.
-- Empty spacer row 3 on every sheet. Totals row on `Flagged Opportunities` leaves columns A–E and J–M blank.
-- Eight deals only. This is a **watch list**, not the region’s full FY27 pipeline.
-
----
-
-## First dashboard views this file can support
-
-Only from fields that exist. No quota, no closed bookings, no SKU mix, no weekly trend.
-
-1. **Team snapshot (new services forecast, not bookings)**  
-   Cards from `Executive Summary`: `Total Flagged Pipeline (TCV)`, `Total HW/SW Tech Value`, `Total Forecasted Services`, `Overall Services Attach Rate`, `Non-Integrated Quote Deals`, `Integrated Deals (Need Uplift)`. This is the only team-level services-dollar view in the file (`$2,500` forecasted on `$16.93M` TCV).
-
-2. **Forecasted services vs pipeline by deal**  
-   From `Flagged Opportunities`: `Forecasted Services` next to `Total TCV (USD)` and `Technology (HW/SW)`, with `Services Attach %`. Makes the `$0` services problem visible deal by deal.
-
-3. **Rep performance (`Assigned AM`)**  
-   Roll up deal count, `Total TCV (USD)`, `Forecasted Services`, and attach from the deal rows. Team vs rep is this grain: team = all eight deals; rep = one `Assigned AM` (treat the placeholder `Assigned AM` as unassigned).
-
-4. **Flagged pipeline list**  
-   Sort/filter the eight opportunities by `Assigned AM`, `Stage`, `CCW Quote Status`, `Close Date` (Q1 vs Q2 text), `Account Name`. Show `Governance & Action Plan`.
-
-5. **Quote-integration / remediation**  
-   `Executive Summary` category table plus `Remediation Plan` rows: Group 1 Non-Integrated (`$7,101,000`, 5 deals) vs Group 2 integrated-but-basic-SNTC (`$9,829,000`, 3 deals). This is the governance story the workbook was built for.
-
-Do not add win rate, quota, bookings-vs-forecast, or SKU attach. Those are not in the file.
+`Tennessee_Region_Pipeline_Services_Governance_FY27.xlsx` — three sheets (`Executive Summary`, `Flagged Opportunities`, `Remediation Plan`). That file is a services-attach watch list. It has **`Assigned AM`**, not `Sales Agent Name`, and **no `Annual Bookings` column**. Steve asked the dashboard to use the MBR extract instead.

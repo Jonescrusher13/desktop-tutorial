@@ -4,48 +4,29 @@ import { parseWorkbook } from "./parse-workbook.mjs";
 
 const data = parseWorkbook();
 
-test("reads the three workbook sheets", () => {
-  assert.deepEqual(data.sheets, [
-    "Executive Summary",
-    "Flagged Opportunities",
-    "Remediation Plan",
-  ]);
+test("reads Sheet0 with Annual Bookings and Sales Agent Name", () => {
+  assert.deepEqual(data.sheets, ["Sheet0"]);
+  assert.ok(data.headers.includes("Annual Bookings"));
+  assert.ok(data.headers.includes("Sales Agent Name"));
 });
 
-test("skips the Flagged Opportunities totals row", () => {
-  const names = data.flaggedOpportunities.deals.map((d) => d["Opportunity Name"]);
-  assert.equal(names.length, 8);
-  assert.ok(!names.some((n) => n.startsWith("Total ")));
+test("skips the Grand Total row and keeps detail grain", () => {
+  assert.equal(data.lines.length, 1959);
+  assert.ok(!data.lines.some((line) => line["Sales Order Number"] === "Grand Total"));
+  assert.ok(data.lines.every((line) => line["Sales Agent Name"]));
 });
 
-test("sums deal TCV and Forecasted Services to the Executive Summary KPIs", () => {
-  const deals = data.flaggedOpportunities.deals;
-  const tcv = deals.reduce((s, d) => s + d["Total TCV (USD)"], 0);
-  const services = deals.reduce((s, d) => s + d["Forecasted Services"], 0);
-  const kpis = Object.fromEntries(
-    data.executiveSummary.kpis.map((k) => [k.label, k.value]),
-  );
-  assert.equal(tcv, 16_930_000);
-  assert.equal(services, 2500);
-  assert.equal(kpis["Total Flagged Pipeline (TCV)"], 16_930_000);
-  assert.equal(kpis["Total Forecasted Services"], 2500);
-  assert.equal(kpis["Non-Integrated Quote Deals"], 5);
-  assert.equal(kpis["Integrated Deals (Need Uplift)"], 3);
-});
-
-test("keeps Assigned AM placeholder and missing Salesforce Deal ID as in the file", () => {
-  const covenant = data.flaggedOpportunities.deals.find((d) =>
-    d["Account Name"].includes("Covenant"),
-  );
-  assert.equal(covenant["Assigned AM"], "Assigned AM");
-  assert.equal(covenant._amPlaceholder, true);
-  assert.equal(covenant["Salesforce Deal ID"], null);
-});
-
-test("parses Close Date quarter text without inventing a date", () => {
-  const firstHorizon = data.flaggedOpportunities.deals.find((d) =>
-    d["Account Name"].includes("First Horizon"),
-  );
-  assert.equal(firstHorizon["Close Date"], "Oct 2026 (Q1)");
-  assert.equal(firstHorizon._closeQuarter, "Q1");
+test("sums Annual Bookings and splits by Sales Agent Name", () => {
+  const byAgent = new Map();
+  let annual = 0;
+  for (const line of data.lines) {
+    annual += line["Annual Bookings"];
+    const name = line["Sales Agent Name"];
+    byAgent.set(name, (byAgent.get(name) ?? 0) + line["Annual Bookings"]);
+  }
+  assert.equal(annual, 337154);
+  assert.equal(byAgent.size, 10);
+  assert.equal(byAgent.get("Loyd,Mack"), 77624);
+  assert.equal(byAgent.get("Tassio,Tim"), 26394);
+  assert.equal(byAgent.get("Kelley,Steven"), 1442);
 });

@@ -8,168 +8,126 @@ export const DEFAULT_XLSX = join(
   __dirname,
   "..",
   "data",
-  "Tennessee_Region_Pipeline_Services_Governance_FY27.xlsx",
+  "mbr360DetailExcel_FY27.xlsx",
 );
 export const DEFAULT_JSON = join(__dirname, "..", "src", "data", "workbook.json");
 
-const TOTAL_LABELS = new Set([
-  "Total Flagged Pipeline",
-  "Total Flagged Opportunities",
-]);
-
-function sheetRows(wb, name) {
-  const sheet = wb.Sheets[name];
-  if (!sheet) {
-    throw new Error(`Missing sheet: ${name}`);
-  }
-  return XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    raw: true,
-    defval: null,
-  });
-}
+const LINE_FIELDS = [
+  "Sales Order Number",
+  "Deal ID",
+  "End Customer Company Name",
+  "End Customer Name",
+  "Booked Date",
+  "Bookings Type",
+  "Sales Motion",
+  "Annual Bookings",
+  "MY Bookings",
+  "Total Bookings",
+  "Sales Agent Name",
+  "L5",
+  "Product Classification",
+  "Service Category",
+  "CX Product",
+];
 
 function asNumber(value) {
-  if (value == null || value === "") return 0;
+  if (value == null || value === "" || value === "-") return 0;
   if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    if (value.startsWith("=")) return null;
-    const n = Number(String(value).replace(/[$,]/g, ""));
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+  const n = Number(String(value).replace(/[$,]/g, ""));
+  return Number.isFinite(n) ? n : 0;
 }
 
 function asText(value) {
   if (value == null) return "";
+  if (value instanceof Date) return value.toISOString();
   return String(value).trim();
 }
 
-function closeQuarter(closeDate) {
-  const match = asText(closeDate).match(/\((Q[12])\)/i);
-  return match ? match[1].toUpperCase() : "";
-}
-
-function salesforceId(value) {
-  const text = asText(value);
-  if (!text || text.toLowerCase() === "none") return null;
-  return text;
+function excelDate(value) {
+  if (value == null || value === "" || value === "-") return "";
+  if (value instanceof Date) {
+    if (value.getFullYear() <= 1900) return "1900-01-01";
+    return value.toISOString().slice(0, 10);
+  }
+  return asText(value);
 }
 
 export function parseWorkbook(filePath = DEFAULT_XLSX) {
-  const wb = XLSX.read(readFileSync(filePath), { type: "buffer", cellFormula: true });
-  const sheetNames = wb.SheetNames;
+  const wb = XLSX.read(readFileSync(filePath), {
+    type: "buffer",
+    cellDates: true,
+  });
+  const sheetName = wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {
+    header: 1,
+    raw: true,
+    defval: null,
+  });
 
-  const execRows = sheetRows(wb, "Executive Summary");
-  const dealRows = sheetRows(wb, "Flagged Opportunities");
-  const planRows = sheetRows(wb, "Remediation Plan");
-
-  const kpiLabels = (execRows[4] || []).map(asText);
-  const kpiValues = execRows[5] || [];
-  const kpis = kpiLabels.map((label, i) => ({
-    label,
-    value: asNumber(kpiValues[i]),
-  }));
-
-  const breakdownHeaders = (execRows[8] || []).map(asText);
-  const breakdown = [];
-  for (let r = 9; r < execRows.length; r += 1) {
-    const row = execRows[r] || [];
-    const category = asText(row[0]);
-    if (!category) continue;
-    breakdown.push({
-      "Category / Classification": category,
-      "Deal Count": asNumber(row[1]),
-      "Total Pipeline Value (TCV)": asNumber(row[2]),
-      "Forecasted Services": asNumber(row[3]),
-      "Avg Services Attach %": asNumber(row[4]),
-      "Primary Risk / Next Action": asText(row[5]),
-      isTotal: TOTAL_LABELS.has(category),
-    });
+  const title = asText(rows[0]?.[0]);
+  const bakedFilters = [];
+  for (let r = 1; r < Math.min(rows.length, 8); r += 1) {
+    const row = rows[r] || [];
+    for (const cell of row) {
+      const text = asText(cell);
+      if (text) bakedFilters.push(text);
+    }
   }
 
-  const dealHeaders = (dealRows[3] || []).map(asText);
-  const headerIndex = Object.fromEntries(dealHeaders.map((h, i) => [h, i]));
-  const col = (row, name) => row[headerIndex[name]];
-
-  const deals = [];
-  for (let r = 4; r < dealRows.length; r += 1) {
-    const row = dealRows[r] || [];
-    const opportunityName = asText(col(row, "Opportunity Name"));
-    if (!opportunityName) continue;
-    if (TOTAL_LABELS.has(opportunityName)) continue;
-
-    const assignedAm = asText(col(row, "Assigned AM"));
-    const closeDate = asText(col(row, "Close Date"));
-    deals.push({
-      "Opportunity Name": opportunityName,
-      "Account Name": asText(col(row, "Account Name")),
-      "Assigned AM": assignedAm,
-      Stage: asText(col(row, "Stage")),
-      "Close Date": closeDate,
-      "Total TCV (USD)": asNumber(col(row, "Total TCV (USD)")),
-      "Technology (HW/SW)": asNumber(col(row, "Technology (HW/SW)")),
-      "Forecasted Services": asNumber(col(row, "Forecasted Services")),
-      "Services Attach %": asNumber(col(row, "Services Attach %")),
-      "Salesforce Deal ID": salesforceId(col(row, "Salesforce Deal ID")),
-      "CCW Quote Status": asText(col(row, "CCW Quote Status")),
-      "Primary Workload": asText(col(row, "Primary Workload")),
-      "Governance & Action Plan": asText(col(row, "Governance & Action Plan")),
-      _closeQuarter: closeQuarter(closeDate),
-      _amPlaceholder: assignedAm === "Assigned AM",
-    });
+  let headerRow = -1;
+  for (let r = 0; r < rows.length; r += 1) {
+    const names = (rows[r] || []).map(asText);
+    if (names.includes("Annual Bookings") && names.includes("Sales Agent Name")) {
+      headerRow = r;
+      break;
+    }
+  }
+  if (headerRow < 0) {
+    throw new Error("Could not find Annual Bookings / Sales Agent Name headers");
   }
 
-  const planHeaders = (planRows[3] || []).map(asText);
-  const planIndex = Object.fromEntries(planHeaders.map((h, i) => [h, i]));
-  const groups = [];
-  for (let r = 4; r < planRows.length; r += 1) {
-    const row = planRows[r] || [];
-    const actionGroup = asText(row[planIndex["Action Group"]]);
-    if (!actionGroup) continue;
-    groups.push({
-      "Action Group": actionGroup,
-      "Target Deals": asText(row[planIndex["Target Deals"]]),
-      "Total TCV": asNumber(row[planIndex["Total TCV"]]),
-      "Key Vulnerability / Gap": asText(row[planIndex["Key Vulnerability / Gap"]]),
-      "Step-by-Step Remediation Action": asText(
-        row[planIndex["Step-by-Step Remediation Action"]],
-      ),
-      "Forwardable Partner Guidance": asText(
-        row[planIndex["Forwardable Partner Guidance"]],
-      ),
-    });
+  const headers = (rows[headerRow] || []).map(asText);
+  const index = Object.fromEntries(headers.map((name, i) => [name, i]));
+  const col = (row, name) => row[index[name]];
+
+  const lines = [];
+  for (let r = headerRow + 1; r < rows.length; r += 1) {
+    const row = rows[r] || [];
+    const order = asText(col(row, "Sales Order Number"));
+    if (!order) continue;
+    if (order.toLowerCase() === "grand total") continue;
+
+    const record = {};
+    for (const name of LINE_FIELDS) {
+      if (!(name in index)) continue;
+      const raw = col(row, name);
+      if (name === "Annual Bookings" || name === "MY Bookings" || name === "Total Bookings") {
+        record[name] = asNumber(raw);
+      } else if (name === "Booked Date") {
+        record[name] = excelDate(raw);
+      } else {
+        record[name] = asText(raw);
+      }
+    }
+    lines.push(record);
   }
 
   return {
-    sourceFile: "Tennessee_Region_Pipeline_Services_Governance_FY27.xlsx",
-    sheets: sheetNames,
-    executiveSummary: {
-      title: asText(execRows[0]?.[0]),
-      scope: asText(execRows[1]?.[0]),
-      kpis,
-      breakdownTitle: asText(execRows[7]?.[0]),
-      breakdownHeaders,
-      breakdown,
-    },
-    flaggedOpportunities: {
-      title: asText(dealRows[0]?.[0]),
-      scope: asText(dealRows[1]?.[0]),
-      headers: dealHeaders,
-      deals,
-    },
-    remediationPlan: {
-      title: asText(planRows[0]?.[0]),
-      subtitle: asText(planRows[1]?.[0]),
-      groups,
-    },
+    sourceFile: "mbr360DetailExcel_FY27.xlsx",
+    originalName: "mbr360DetailExcel_2026-10-09T18_15_50Z_14705973296960010704.xlsx",
+    sheets: wb.SheetNames,
+    sheet: sheetName,
+    title,
+    bakedFilters,
+    headers,
+    lines,
   };
 }
 
 export function parseAndWrite(filePath = DEFAULT_XLSX, outPath = DEFAULT_JSON) {
   const data = parseWorkbook(filePath);
   mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, `${JSON.stringify(data, null, 2)}\n`);
+  writeFileSync(outPath, `${JSON.stringify(data)}\n`);
   return data;
 }
 
@@ -178,7 +136,8 @@ const isMain =
 
 if (isMain) {
   const data = parseAndWrite();
+  const annual = data.lines.reduce((s, line) => s + line["Annual Bookings"], 0);
   process.stdout.write(
-    `Parsed ${data.flaggedOpportunities.deals.length} deals from ${data.sheets.join(", ")}\n`,
+    `Parsed ${data.lines.length} lines from ${data.sheet}; Annual Bookings ${annual}\n`,
   );
 }
