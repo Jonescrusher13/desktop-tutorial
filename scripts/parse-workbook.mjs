@@ -65,14 +65,6 @@ export function parseWorkbook(filePath = DEFAULT_XLSX) {
   });
 
   const title = asText(rows[0]?.[0]);
-  const bakedFilters = [];
-  for (let r = 1; r < Math.min(rows.length, 8); r += 1) {
-    const row = rows[r] || [];
-    for (const cell of row) {
-      const text = asText(cell);
-      if (text) bakedFilters.push(text);
-    }
-  }
 
   let headerRow = -1;
   for (let r = 0; r < rows.length; r += 1) {
@@ -84,6 +76,15 @@ export function parseWorkbook(filePath = DEFAULT_XLSX) {
   }
   if (headerRow < 0) {
     throw new Error("Could not find Annual Bookings / Sales Agent Name headers");
+  }
+
+  const bakedFilters = [];
+  for (let r = 1; r < headerRow; r += 1) {
+    const row = rows[r] || [];
+    for (const cell of row) {
+      const text = asText(cell);
+      if (text) bakedFilters.push(text);
+    }
   }
 
   const headers = (rows[headerRow] || []).map(asText);

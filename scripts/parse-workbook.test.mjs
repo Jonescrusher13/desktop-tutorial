@@ -8,6 +8,12 @@ test("reads Sheet0 with Annual Bookings and Sales Agent Name", () => {
   assert.deepEqual(data.sheets, ["Sheet0"]);
   assert.ok(data.headers.includes("Annual Bookings"));
   assert.ok(data.headers.includes("Sales Agent Name"));
+  assert.deepEqual(data.bakedFilters, [
+    "Product Service is equal to Service",
+    "Year is equal to 2027",
+    "Quarter is equal to Q1 FY2027",
+    "Sales Motion is equal to New and Unknown",
+  ]);
 });
 
 test("skips the Grand Total row and keeps detail grain", () => {
