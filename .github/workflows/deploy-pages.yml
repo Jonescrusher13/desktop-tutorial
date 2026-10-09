@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: pages
@@ -33,3 +34,17 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist
           force_orphan: true
+      - name: Enable GitHub Pages on gh-pages
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" \
+            -H "Accept: application/vnd.github+json" \
+            -f "source[branch]=gh-pages" \
+            -f "source[path]=/" \
+          || gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" \
+            -H "Accept: application/vnd.github+json" \
+            -f "source[branch]=gh-pages" \
+            -f "source[path]=/"
+          gh api "repos/${GITHUB_REPOSITORY}/pages" || true
