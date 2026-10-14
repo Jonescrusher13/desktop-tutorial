@@ -25,6 +25,12 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Refuse tracked workbooks
+        run: |
+          if git ls-files | grep -Ei '\.xlsx?$'; then
+            echo "xlsx/xls files must not be in the git tree"
+            exit 1
+          fi
       - run: npm test
       - run: npm run build
         env:

@@ -1,15 +1,41 @@
 import assert from "node:assert/strict";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import * as XLSX from "xlsx";
-import { parseWorkbook, parseMbrWorkbook, WorkbookParseError } from "./parse-workbook.mjs";
+import { parseMbrWorkbook, WorkbookParseError } from "./parse-workbook.mjs";
 
-const fy26Path = join(dirname(fileURLToPath(import.meta.url)), "..", "data", "mbr360DetailExcel_FY26.xlsx");
-
-const data = parseWorkbook();
+function mbrBuffer({
+  title = "Bookings 360|TEST|Refreshed",
+  filters = [
+    "Product Service is equal to Service",
+    "Year is equal to 2027",
+    "Quarter is equal to Q1 FY2027",
+    "Sales Motion is equal to New and Unknown",
+  ],
+  rows = [
+    ["SO-1", "D-1", "Acme", "Loyd,Mack", 100, 10, 110],
+    ["SO-2", "D-2", "Beta", "Tassio,Tim", 40, 5, 45],
+    ["SO-3", "D-3", "Acme", "Loyd,Mack", 25, 0, 25],
+    ["Grand Total", "", "", "", 165, 15, 180],
+  ],
+} = {}) {
+  const header = [
+    "Sales Order Number",
+    "Deal ID",
+    "End Customer Company Name",
+    "Sales Agent Name",
+    "Annual Bookings",
+    "MY Bookings",
+    "Total Bookings",
+  ];
+  const aoa = [[title], ...filters.map((text) => [null, null, text]), header, ...rows];
+  const sheet = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, "Sheet0");
+  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+}
 
 test("reads Sheet0 with Annual Bookings and Sales Agent Name", () => {
+  const data = parseMbrWorkbook(mbrBuffer(), "sample.xlsx");
   assert.deepEqual(data.sheets, ["Sheet0"]);
   assert.ok(data.headers.includes("Annual Bookings"));
   assert.ok(data.headers.includes("Sales Agent Name"));
@@ -22,12 +48,14 @@ test("reads Sheet0 with Annual Bookings and Sales Agent Name", () => {
 });
 
 test("skips the Grand Total row and keeps detail grain", () => {
-  assert.equal(data.lines.length, 1959);
+  const data = parseMbrWorkbook(mbrBuffer(), "sample.xlsx");
+  assert.equal(data.lines.length, 3);
   assert.ok(!data.lines.some((line) => line["Sales Order Number"] === "Grand Total"));
   assert.ok(data.lines.every((line) => line["Sales Agent Name"]));
 });
 
 test("sums Annual Bookings and splits by Sales Agent Name", () => {
+  const data = parseMbrWorkbook(mbrBuffer(), "sample.xlsx");
   const byAgent = new Map();
   let annual = 0;
   for (const line of data.lines) {
@@ -35,17 +63,28 @@ test("sums Annual Bookings and splits by Sales Agent Name", () => {
     const name = line["Sales Agent Name"];
     byAgent.set(name, (byAgent.get(name) ?? 0) + line["Annual Bookings"]);
   }
-  assert.equal(annual, 337154);
-  assert.equal(byAgent.size, 10);
-  assert.equal(byAgent.get("Loyd,Mack"), 77624);
-  assert.equal(byAgent.get("Tassio,Tim"), 26394);
-  assert.equal(byAgent.get("Kelley,Steven"), 1442);
+  assert.equal(annual, 165);
+  assert.equal(byAgent.size, 2);
+  assert.equal(byAgent.get("Loyd,Mack"), 125);
+  assert.equal(byAgent.get("Tassio,Tim"), 40);
 });
 
-test("sums FY26 Annual Bookings from the Q1 extract", () => {
-  const fy26 = parseWorkbook(fy26Path);
-  assert.ok(fy26.headers.includes("Annual Bookings"));
-  assert.ok(fy26.headers.includes("Sales Agent Name"));
+test("parses a second-year buffer independently", () => {
+  const fy26 = parseMbrWorkbook(
+    mbrBuffer({
+      filters: [
+        "Product Service is equal to Service",
+        "Year is equal to 2026",
+        "Quarter is equal to Q1 FY2026",
+        "Sales Motion is equal to New",
+      ],
+      rows: [
+        ["SO-9", "D-9", "Acme", "Loyd,Mack", 50, 0, 50],
+        ["Grand Total", "", "", "", 50, 0, 50],
+      ],
+    }),
+    "fy26-sample.xlsx",
+  );
   assert.deepEqual(fy26.bakedFilters, [
     "Product Service is equal to Service",
     "Year is equal to 2026",
@@ -53,8 +92,8 @@ test("sums FY26 Annual Bookings from the Q1 extract", () => {
     "Sales Motion is equal to New",
   ]);
   const annual = fy26.lines.reduce((sum, line) => sum + line["Annual Bookings"], 0);
-  assert.equal(fy26.lines.length, 1765);
-  assert.equal(annual, 524474);
+  assert.equal(fy26.lines.length, 1);
+  assert.equal(annual, 50);
 });
 
 test("rejects a workbook missing Annual Bookings and Sales Agent Name", () => {

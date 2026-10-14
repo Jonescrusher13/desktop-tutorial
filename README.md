@@ -8,7 +8,7 @@ Sums **Annual Bookings** and filters by **Sales Agent Name**. Two slots (FY26 an
 
 https://jonescrusher13.github.io/desktop-tutorial/
 
-Drop FY26 and FY27 MBR `.xlsx` files into the two slots. The published site does not include Cisco workbooks — parse stays in the browser.
+Drop FY26 and FY27 MBR `.xlsx` files into the two slots. Cisco workbooks are not in this repo or on the published site — parse stays in the browser.
 
 If that 404s, enable Pages once: repo **Settings → Pages → Deploy from a branch → `gh-pages` / root**.
 
