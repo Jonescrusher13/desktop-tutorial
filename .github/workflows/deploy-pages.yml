@@ -29,6 +29,13 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /desktop-tutorial/
+      - name: Refuse to publish workbooks
+        run: |
+          if find dist -iname '*.xlsx' | grep -q .; then
+            echo "xlsx files must not ship to GitHub Pages"
+            find dist -iname '*.xlsx'
+            exit 1
+          fi
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

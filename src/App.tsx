@@ -5,7 +5,6 @@ import { parseMbrWorkbook, WorkbookParseError } from "./lib/parseMbr.js";
 import { readSession, writeSession, type FiscalYear, type YearSlotState } from "./lib/session.js";
 
 const ALL = "all";
-const BUNDLED_FILE = "mbr360DetailExcel_FY27.xlsx";
 const YEARS: FiscalYear[] = ["FY26", "FY27"];
 
 type Slot = {
@@ -85,7 +84,7 @@ export default function App() {
   const [year, setYear] = useState<FiscalYear>("FY27");
   const [slots, setSlots] = useState<Record<FiscalYear, Slot>>({
     FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
-    FY27: { ...EMPTY_SLOT, status: "Loading FY27 workbook…" },
+    FY27: { ...EMPTY_SLOT, status: "No FY27 file yet." },
   });
   const [agent, setAgent] = useState(ALL);
   const [ready, setReady] = useState(false);
@@ -107,48 +106,20 @@ export default function App() {
     if (existing) {
       setYear(existing.year);
       setSlots({
-        FY26: fromSaved(existing.fy26),
-        FY27: fromSaved(existing.fy27),
+        FY26: existing.fy26
+          ? fromSaved(existing.fy26)
+          : { ...EMPTY_SLOT, status: "No FY26 file yet." },
+        FY27: existing.fy27
+          ? fromSaved(existing.fy27)
+          : { ...EMPTY_SLOT, status: "No FY27 file yet." },
       });
-      setReady(true);
-      return;
+    } else {
+      setSlots({
+        FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
+        FY27: { ...EMPTY_SLOT, status: "No FY27 file yet." },
+      });
     }
-
-    let cancelled = false;
-    const url = `${import.meta.env.BASE_URL}${BUNDLED_FILE}`;
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Could not load ${BUNDLED_FILE}`);
-        return res.arrayBuffer();
-      })
-      .then((buffer) => {
-        if (cancelled) return;
-        const data = parseMbrWorkbook(buffer, BUNDLED_FILE);
-        setSlots({
-          FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
-          FY27: {
-            ...EMPTY_SLOT,
-            workbook: data,
-            fileName: BUNDLED_FILE,
-            loadedAt: new Date().toISOString(),
-          },
-        });
-        setReady(true);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setSlots({
-          FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
-          FY27: {
-            ...EMPTY_SLOT,
-            error: err instanceof Error ? err.message : "Could not load the bundled FY27 workbook.",
-          },
-        });
-        setReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+    setReady(true);
   }, []);
 
   const onFiles = useCallback(
