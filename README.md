@@ -2,7 +2,7 @@
 
 Dark-theme web dashboard for Steve Jones’ Bookings 360 MBR extract.
 
-Sums **Annual Bookings** and filters by **Sales Agent Name**. Drop a new `.xlsx` on the page to refresh — parsed in this browser only, kept in the tab session, never sent to a server or third-party API.
+Sums **Annual Bookings** and filters by **Sales Agent Name**. Two slots (FY26 and FY27) take MBR 360 `.xlsx` files; a year filter shows that year’s numbers only. Parsed in this browser, kept per year in the tab session, never sent to a server.
 
 ## Live URL
 

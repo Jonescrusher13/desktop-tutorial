@@ -2,10 +2,29 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BookingLine, WorkbookData } from "./data/types";
 import { money, unique } from "./lib/format";
 import { parseMbrWorkbook, WorkbookParseError } from "./lib/parseMbr.js";
-import { readSession, writeSession } from "./lib/session.js";
+import { readSession, writeSession, type FiscalYear, type YearSlotState } from "./lib/session.js";
 
 const ALL = "all";
 const BUNDLED_FILE = "mbr360DetailExcel_FY27.xlsx";
+const YEARS: FiscalYear[] = ["FY26", "FY27"];
+
+type Slot = {
+  workbook: WorkbookData | null;
+  fileName: string;
+  loadedAt: string;
+  error: string;
+  status: string;
+  dragOver: boolean;
+};
+
+const EMPTY_SLOT: Slot = {
+  workbook: null,
+  fileName: "",
+  loadedAt: "",
+  error: "",
+  status: "",
+  dragOver: false,
+};
 
 function rollup(lines: BookingLine[]) {
   return {
@@ -47,35 +66,51 @@ async function parseFile(file: File): Promise<WorkbookData> {
   return parseMbrWorkbook(buffer, file.name);
 }
 
-export default function App() {
-  const [workbook, setWorkbook] = useState<WorkbookData | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [loadedAt, setLoadedAt] = useState("");
-  const [agent, setAgent] = useState(ALL);
-  const [error, setError] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const [status, setStatus] = useState("Loading workbook…");
+function persistable(slot: Slot): YearSlotState | null {
+  if (!slot.workbook || !slot.fileName || !slot.loadedAt) return null;
+  return { workbook: slot.workbook, fileName: slot.fileName, loadedAt: slot.loadedAt };
+}
 
-  const applyWorkbook = useCallback((data: WorkbookData, name: string, when: string, persist: boolean) => {
-    setWorkbook(data);
-    setFileName(name);
-    setLoadedAt(when);
-    setAgent(ALL);
-    setError("");
-    setStatus("");
-    if (persist) {
-      try {
-        writeSession(data, name, when);
-      } catch {
-        // Session storage is best-effort; the file stays in this tab's memory.
-      }
+function fromSaved(saved: YearSlotState | null | undefined): Slot {
+  if (!saved) return { ...EMPTY_SLOT };
+  return {
+    ...EMPTY_SLOT,
+    workbook: saved.workbook,
+    fileName: saved.fileName,
+    loadedAt: saved.loadedAt,
+  };
+}
+
+export default function App() {
+  const [year, setYear] = useState<FiscalYear>("FY27");
+  const [slots, setSlots] = useState<Record<FiscalYear, Slot>>({
+    FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
+    FY27: { ...EMPTY_SLOT, status: "Loading FY27 workbook…" },
+  });
+  const [agent, setAgent] = useState(ALL);
+  const [ready, setReady] = useState(false);
+
+  const persist = useCallback((nextYear: FiscalYear, nextSlots: Record<FiscalYear, Slot>) => {
+    try {
+      writeSession({
+        year: nextYear,
+        fy26: persistable(nextSlots.FY26),
+        fy27: persistable(nextSlots.FY27),
+      });
+    } catch {
+      // Session storage is best-effort; files stay in this tab's memory.
     }
   }, []);
 
   useEffect(() => {
     const existing = readSession();
     if (existing) {
-      applyWorkbook(existing.workbook, existing.fileName, existing.loadedAt, false);
+      setYear(existing.year);
+      setSlots({
+        FY26: fromSaved(existing.fy26),
+        FY27: fromSaved(existing.fy27),
+      });
+      setReady(true);
       return;
     }
 
@@ -89,39 +124,86 @@ export default function App() {
       .then((buffer) => {
         if (cancelled) return;
         const data = parseMbrWorkbook(buffer, BUNDLED_FILE);
-        applyWorkbook(data, BUNDLED_FILE, new Date().toISOString(), false);
+        setSlots({
+          FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
+          FY27: {
+            ...EMPTY_SLOT,
+            workbook: data,
+            fileName: BUNDLED_FILE,
+            loadedAt: new Date().toISOString(),
+          },
+        });
+        setReady(true);
       })
       .catch((err) => {
         if (cancelled) return;
-        setStatus("");
-        setError(err instanceof Error ? err.message : "Could not load the bundled workbook.");
+        setSlots({
+          FY26: { ...EMPTY_SLOT, status: "No FY26 file yet." },
+          FY27: {
+            ...EMPTY_SLOT,
+            error: err instanceof Error ? err.message : "Could not load the bundled FY27 workbook.",
+          },
+        });
+        setReady(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [applyWorkbook]);
+  }, []);
 
   const onFiles = useCallback(
-    async (list: FileList | null) => {
+    async (target: FiscalYear, list: FileList | null) => {
       const file = list?.[0];
       if (!file) return;
-      setError("");
-      setStatus(`Reading ${file.name}…`);
+      setSlots((current) => ({
+        ...current,
+        [target]: { ...current[target], error: "", status: `Reading ${file.name}…`, dragOver: false },
+      }));
       try {
         const data = await parseFile(file);
-        applyWorkbook(data, file.name, new Date().toISOString(), true);
+        const loadedAt = new Date().toISOString();
+        setSlots((current) => {
+          const next = {
+            ...current,
+            [target]: {
+              workbook: data,
+              fileName: file.name,
+              loadedAt,
+              error: "",
+              status: "",
+              dragOver: false,
+            },
+          };
+          persist(target, next);
+          return next;
+        });
+        setYear(target);
+        setAgent(ALL);
       } catch (err) {
-        setStatus("");
-        if (err instanceof WorkbookParseError) {
-          setError(err.message);
-        } else {
-          setError("Could not parse that file in the browser. Use an .xlsx MBR 360 export.");
-        }
+        const message =
+          err instanceof WorkbookParseError
+            ? err.message
+            : "Could not parse that file in the browser. Use an .xlsx MBR 360 export.";
+        setSlots((current) => ({
+          ...current,
+          [target]: { ...current[target], status: "", error: message, dragOver: false },
+        }));
       }
     },
-    [applyWorkbook],
+    [persist],
   );
 
+  const selectYear = useCallback((next: FiscalYear) => {
+    setYear(next);
+    setAgent(ALL);
+    setSlots((current) => {
+      persist(next, current);
+      return current;
+    });
+  }, [persist]);
+
+  const active = slots[year];
+  const workbook = active.workbook;
   const lines = workbook?.lines ?? [];
   const agents = unique(lines.map((line) => line["Sales Agent Name"]));
   const filtered = useMemo(() => {
@@ -137,13 +219,14 @@ export default function App() {
   return (
     <>
       <header className="masthead">
-        <p className="kicker">Bookings 360 · {titleParts[1] || "FY27"}</p>
+        <p className="kicker">Bookings 360 · {year}</p>
         <h1>Annual Bookings</h1>
         <p className="lede">
-          Amounts are the <strong>Annual Bookings</strong> column, summed across booking lines.
-          Filter by <strong>Sales Agent Name</strong>. Drop a new MBR 360 .xlsx to refresh — parsed
-          in this browser only.
+          Amounts are the <strong>Annual Bookings</strong> column from the selected year’s MBR 360
+          file. Filter by <strong>Sales Agent Name</strong>. Each year’s .xlsx is parsed in this
+          browser only.
         </p>
+        {titleParts[2] ? <p className="notice">{titleParts[2]}</p> : null}
         {workbook?.bakedFilters?.length ? (
           <div className="chips">
             {workbook.bakedFilters.map((chip) => (
@@ -155,57 +238,38 @@ export default function App() {
         ) : null}
       </header>
 
-      <section
-        className={`dropzone${dragOver ? " is-drag" : ""}`}
-        data-testid="upload-box"
-        onDragEnter={(event) => {
-          event.preventDefault();
-          setDragOver(true);
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragOver(false);
-          void onFiles(event.dataTransfer.files);
-        }}
-      >
-        <p className="dropzone-title">Drop the latest MBR 360 workbook here</p>
-        <p className="dropzone-help">
-          .xlsx only. Parsed locally — nothing is uploaded to a server or third-party API.
-        </p>
-        <label className="file-button">
-          Choose file
-          <input
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            aria-label="Upload MBR 360 workbook"
-            onChange={(event) => {
-              void onFiles(event.target.files);
-              event.target.value = "";
-            }}
+      <div className="dropzones">
+        {YEARS.map((slotYear) => (
+          <YearDropzone
+            key={slotYear}
+            year={slotYear}
+            slot={slots[slotYear]}
+            selected={year === slotYear}
+            onDrag={(over) =>
+              setSlots((current) => ({
+                ...current,
+                [slotYear]: { ...current[slotYear], dragOver: over },
+              }))
+            }
+            onFiles={(files) => void onFiles(slotYear, files)}
           />
-        </label>
-        {fileName ? (
-          <p className="file-meta" data-testid="loaded-file">
-            Loaded <strong>{fileName}</strong>
-            {loadedAt ? ` · Refreshed ${formatLoadedAt(loadedAt)}` : ""}
-            {workbook ? ` · ${workbook.sheet}` : ""}
-          </p>
-        ) : (
-          <p className="file-meta">{status || "No workbook loaded."}</p>
-        )}
-        {error ? (
-          <p className="upload-error" role="alert" data-testid="upload-error">
-            {error}
-          </p>
-        ) : null}
-      </section>
+        ))}
+      </div>
 
       <section className="toolbar" aria-label="Filters">
+        <div className="mode" role="group" aria-label="Fiscal year">
+          {YEARS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={year === item}
+              data-testid={`year-${item.toLowerCase()}`}
+              onClick={() => selectYear(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
         <label>
           Sales Agent Name
           <select
@@ -229,6 +293,7 @@ export default function App() {
           <section>
             <h2>Annual Bookings</h2>
             <p className="section-help">
+              {year}.{" "}
               {agent === ALL
                 ? `All ${agents.length} Sales Agent Name values. ${stats.count} lines.`
                 : `${agent}. ${stats.count} lines.`}{" "}
@@ -296,7 +361,8 @@ export default function App() {
           <section style={{ marginTop: 28 }}>
             <h2>Booking lines</h2>
             <p className="section-help">
-              One row = one line in the file. Same Sales Order Number / Deal ID can appear more than once.
+              One row = one line in the {year} file. Same Sales Order Number / Deal ID can appear more
+              than once.
             </p>
             <div className="table-wrap">
               <table>
@@ -336,14 +402,82 @@ export default function App() {
           </section>
         </>
       ) : (
-        <p className="empty">{status || "Load an MBR 360 .xlsx to see Annual Bookings."}</p>
+        <p className="empty" data-testid="empty-year">
+          {ready
+            ? `No ${year} workbook loaded. Drop an MBR 360 .xlsx in the ${year} slot — this view will not use the other year’s Annual Bookings.`
+            : active.status || `Loading ${year}…`}
+        </p>
       )}
 
       <p className="footnote">
-        Source stays in this browser tab. Last loaded file is kept in session storage until the tab
-        closes. No login and no third-party upload.
+        FY26 and FY27 stay in this browser tab (session storage) until the tab closes. No login and no
+        third-party upload.
       </p>
     </>
+  );
+}
+
+function YearDropzone({
+  year,
+  slot,
+  selected,
+  onDrag,
+  onFiles,
+}: {
+  year: FiscalYear;
+  slot: Slot;
+  selected: boolean;
+  onDrag: (over: boolean) => void;
+  onFiles: (files: FileList | null) => void;
+}) {
+  return (
+    <section
+      className={`dropzone${slot.dragOver ? " is-drag" : ""}${selected ? " is-selected" : ""}`}
+      data-testid={`upload-box-${year.toLowerCase()}`}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        onDrag(true);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDrag(true);
+      }}
+      onDragLeave={() => onDrag(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrag(false);
+        onFiles(event.dataTransfer.files);
+      }}
+    >
+      <p className="dropzone-title">{year} MBR 360</p>
+      <p className="dropzone-help">Drop an .xlsx or choose a file. Parsed in this browser only.</p>
+      <label className="file-button">
+        Choose {year} file
+        <input
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          aria-label={`Upload ${year} MBR 360 workbook`}
+          onChange={(event) => {
+            onFiles(event.target.files);
+            event.target.value = "";
+          }}
+        />
+      </label>
+      {slot.fileName ? (
+        <p className="file-meta" data-testid={`loaded-file-${year.toLowerCase()}`}>
+          Loaded <strong>{slot.fileName}</strong>
+          {slot.loadedAt ? ` · Refreshed ${formatLoadedAt(slot.loadedAt)}` : ""}
+          {slot.workbook ? ` · ${slot.workbook.sheet}` : ""}
+        </p>
+      ) : (
+        <p className="file-meta">{slot.status || `No ${year} workbook loaded.`}</p>
+      )}
+      {slot.error ? (
+        <p className="upload-error" role="alert" data-testid={`upload-error-${year.toLowerCase()}`}>
+          {slot.error}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

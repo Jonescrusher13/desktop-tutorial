@@ -106,12 +106,29 @@ h1 {
   font-weight: 500;
 }
 
-.dropzone {
+.dropzones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   margin: 20px 0;
+}
+
+@media (max-width: 820px) {
+  .dropzones {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dropzone {
+  margin: 0;
   padding: 20px;
   text-align: center;
   background: var(--card);
   border: 1px dashed var(--navy);
+}
+
+.dropzone.is-selected {
+  border-style: solid;
 }
 
 .dropzone.is-drag {

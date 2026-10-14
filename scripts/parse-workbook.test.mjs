@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import * as XLSX from "xlsx";
 import { parseWorkbook, parseMbrWorkbook, WorkbookParseError } from "./parse-workbook.mjs";
+
+const fy26Path = join(dirname(fileURLToPath(import.meta.url)), "..", "data", "mbr360DetailExcel_FY26.xlsx");
 
 const data = parseWorkbook();
 
@@ -36,6 +40,21 @@ test("sums Annual Bookings and splits by Sales Agent Name", () => {
   assert.equal(byAgent.get("Loyd,Mack"), 77624);
   assert.equal(byAgent.get("Tassio,Tim"), 26394);
   assert.equal(byAgent.get("Kelley,Steven"), 1442);
+});
+
+test("sums FY26 Annual Bookings from the Q1 extract", () => {
+  const fy26 = parseWorkbook(fy26Path);
+  assert.ok(fy26.headers.includes("Annual Bookings"));
+  assert.ok(fy26.headers.includes("Sales Agent Name"));
+  assert.deepEqual(fy26.bakedFilters, [
+    "Product Service is equal to Service",
+    "Year is equal to 2026",
+    "Quarter is equal to Q1 FY2026",
+    "Sales Motion is equal to New",
+  ]);
+  const annual = fy26.lines.reduce((sum, line) => sum + line["Annual Bookings"], 0);
+  assert.equal(fy26.lines.length, 1765);
+  assert.equal(annual, 524474);
 });
 
 test("rejects a workbook missing Annual Bookings and Sales Agent Name", () => {
